@@ -1,39 +1,49 @@
-#include <SDL3/SDL.h>
-//#include <SDL3/SDL_opengl.h>
-#include <GLES3/gl3.h>
+#include <RmlUi/Core.h>
+#include <RmlUi/Debugger.h>
+#include "RmlUiBackend/RmlUi_Backend.h"
+#include "RmlUiBackend/RmlUi_Include_GL3.h"
+#include "RmlUiBackend/RmlUi_Renderer_GL3.h"
+#include "RmlUiBackend/RmlUi_Platform_SDL.h"
 #include "Rendering/GLProgram.hpp"
 #include "Rendering/Camera.hpp"
 #include "CameraController.hpp"
-#include <iostream>
 
 int main()
 {
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("Ultra Minecraft clone", 800, 600,
-        SDL_WINDOW_RESIZABLE|SDL_WINDOW_OPENGL);
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    SDL_GLContext glContext = SDL_GL_CreateContext(window);
-    if (!glContext)
+    if(!Backend::Initialize("Rml backend window", 800, 600, true))
     {
-        SDL_LogCritical(SDL_LOG_CATEGORY_APPLICATION,
-            "SDL_GL_CreateContext failed! SDL_Error says: %s", SDL_GetError());
-        SDL_DestroyWindow(window);
-        SDL_Quit();
+	    Backend::Shutdown();
         return -1;
     }
 
-    int interval;
-    if(SDL_GL_GetSwapInterval(&interval))
+    auto systemInterfaceSDL = dynamic_cast<SystemInterface_SDL*>(Backend::GetSystemInterface());
+    auto renderInterfaceGL3 = dynamic_cast<RenderInterface_GL3*>(Backend::GetRenderInterface());
+
+    Rml::SetSystemInterface(Backend::GetSystemInterface());
+	Rml::SetRenderInterface(Backend::GetRenderInterface());
+
+	// RmlUi initialisation.
+	if(!Rml::Initialise())
     {
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-            "SDL_GL_GetSwapInterval is set to %d", interval);
+        Rml::Shutdown();
+	    Backend::Shutdown();
+        return -1;
     }
 
-    ////////////////////////////////
+    SDL_Window* window = systemInterfaceSDL->GetWindow();
+
+	// Create the main RmlUi context.
+	Rml::Context* context = Rml::CreateContext("main", Rml::Vector2i(800, 600));
+	if (!context)
+	{
+		Rml::Shutdown();
+		Backend::Shutdown();
+		return -1;
+	}
+
+	Rml::Debugger::Initialise(context);
+	Rml::Debugger::SetVisible(true);
+
     const int VERTEX_COUNT = 6;
     GLfloat vertices[] =
     {
@@ -51,8 +61,6 @@ int main()
     GLShaderProgram program;
     if(!program.Load("assets/shaders/triangle.vs", "assets/shaders/triangle.fs"))
     {
-        SDL_DestroyWindow(window);
-        SDL_Quit();
         return -1;
     }
 
@@ -75,30 +83,33 @@ int main()
 
     SDL_SetWindowRelativeMouseMode(window, true);
 
-    glClearColor(0.1333f, 0.1333f, 0.2667f, 1.0f);
+    glClearColor(0.0, 0.0, 1.0, 1.0);
 
     bool running = true;
+    bool sendEventsToUi = false;
 
-    while(running)
-    {
-        SDL_Event event;
-        while(SDL_PollEvent(&event))
+	while (running)
+	{
+        if(sendEventsToUi)
+		    running = Backend::ProcessEvents(context, nullptr, false);
+        else
         {
-            if(event.type == SDL_EVENT_QUIT)
+            SDL_Event event;
+            while(SDL_PollEvent(&event))
             {
-                running = false;
-            }
-            else if(event.type == SDL_EVENT_MOUSE_MOTION)
-            {
-                cameraController.UpdateRotation(event.motion.xrel, event.motion.yrel, 0.2f);
+                if(event.type == SDL_EVENT_QUIT)
+                {
+                    running = false;
+                }
+                else if(event.type == SDL_EVENT_MOUSE_MOTION)
+                {
+                    cameraController.UpdateRotation(event.motion.xrel, event.motion.yrel, 0.2f);
+                }
             }
         }
+		context->Update();
 
         cameraController.Update(1.0f);
-
-        int width, height;
-        SDL_GetWindowSizeInPixels(window, &width, &height);
-        glViewport(0, 0, width, height);
 
         glClear(GL_COLOR_BUFFER_BIT);
         program.Use();
@@ -106,11 +117,14 @@ int main()
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT);
         glBindVertexArray(0);
-        SDL_GL_SwapWindow(window);
-    }
 
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+		Backend::BeginFrame();
+		context->Render();
+		Backend::PresentFrame();
+	}
 
+	// Shutdown RmlUi.
+	Rml::Shutdown();
+	Backend::Shutdown();
     return 0;
-};
+}
