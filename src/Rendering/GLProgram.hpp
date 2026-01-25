@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLES3/gl3.h>
+#include <glm/mat4x4.hpp>
 
 class GLShaderProgram
 {
@@ -21,4 +22,5 @@ public:
 
     bool Load(const char* vertexPath, const char* fragmentPath);
     void Use();
+    void SetUniformMat4x4(const GLchar* name, glm::mat4x4 matrix);
 };

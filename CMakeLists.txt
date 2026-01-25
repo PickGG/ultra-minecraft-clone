@@ -4,6 +4,7 @@ project(UltraMinecraftClone)
 
 find_package(SDL3 REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(glm REQUIRED)
 
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
 
@@ -21,4 +22,5 @@ target_compile_features(game PRIVATE cxx_std_20)
 target_link_libraries(game PRIVATE
     SDL3::SDL3
     OpenGL::GL
+    glm::glm
 )

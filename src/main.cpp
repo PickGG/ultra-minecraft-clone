@@ -1,12 +1,15 @@
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_opengl.h>
+//#include <SDL3/SDL_opengl.h>
 #include <GLES3/gl3.h>
 #include "Rendering/GLProgram.hpp"
+#include "Rendering/Camera.hpp"
+#include "CameraController.hpp"
+#include <iostream>
 
 int main()
 {
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("Ultra Minecraft clone", 600, 400,
+    SDL_Window* window = SDL_CreateWindow("Ultra Minecraft clone", 800, 600,
         SDL_WINDOW_RESIZABLE|SDL_WINDOW_OPENGL);
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -31,10 +34,16 @@ int main()
     }
 
     ////////////////////////////////
-    GLfloat vertices[] = {
+    const int VERTEX_COUNT = 6;
+    GLfloat vertices[] =
+    {
         -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        0.0f,  0.5f, 0.0f
+        -0.5f, 0.5f, 0.0f,
+         0.5f,  0.5f, 0.0f,
+
+         0.5f, 0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+        -0.5f, -0.5f, 0.0f,
     };
     GLuint VBO;
     glGenBuffers(1, &VBO);
@@ -60,6 +69,11 @@ int main()
     //4. Отвязываем VAO
     glBindVertexArray(0); 
     ////////////////////////////////
+    Camera camera(window);
+    camera.SetPosition(glm::vec3(1.0f, 0.0f, 11.0f));
+    CameraController cameraController(&camera);
+
+    SDL_SetWindowRelativeMouseMode(window, true);
 
     glClearColor(0.1333f, 0.1333f, 0.2667f, 1.0f);
 
@@ -71,16 +85,26 @@ int main()
         while(SDL_PollEvent(&event))
         {
             if(event.type == SDL_EVENT_QUIT)
+            {
                 running = false;
+            }
+            else if(event.type == SDL_EVENT_MOUSE_MOTION)
+            {
+                cameraController.UpdateRotation(event.motion.xrel, event.motion.yrel, 0.2f);
+            }
         }
+
+        cameraController.Update(1.0f);
+
         int width, height;
         SDL_GetWindowSizeInPixels(window, &width, &height);
         glViewport(0, 0, width, height);
 
         glClear(GL_COLOR_BUFFER_BIT);
         program.Use();
+        program.SetUniformMat4x4("projection_view", camera.CalcMatrix());
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT);
         glBindVertexArray(0);
         SDL_GL_SwapWindow(window);
     }

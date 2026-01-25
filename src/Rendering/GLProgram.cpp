@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL_iostream.h>
 #include <SDL3/SDL_log.h>
+#include <glm/gtc/type_ptr.hpp>
 
 GLchar* GLShaderProgram::LoadShader(const char* path)
 {
@@ -105,4 +106,15 @@ bool GLShaderProgram::Load(const char *vertexPath, const char *fragmentPath)
 void GLShaderProgram::Use()
 {
     glUseProgram(m_shaderProgram);
+}
+
+void GLShaderProgram::SetUniformMat4x4(const GLchar* name, glm::mat4x4 matrix)
+{
+    GLint location = glGetUniformLocation(m_shaderProgram, name);
+    if(location == -1)
+    {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get a location of uniform '%s'", name);
+        return;
+    }
+    glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
 }
