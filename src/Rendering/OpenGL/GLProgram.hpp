@@ -1,7 +1,7 @@
 #pragma once
 
 //#include <GLES3/gl3.h>
-#include "../ThisProjectGL.hpp"
+#include "../../ThisProjectGL.hpp"
 #include <glm/mat4x4.hpp>
 
 class GLShaderProgram

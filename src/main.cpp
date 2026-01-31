@@ -4,9 +4,10 @@
 #include "RmlUiBackend/RmlUi_Include_GL3.h"
 #include "RmlUiBackend/RmlUi_Renderer_GL3.h"
 #include "RmlUiBackend/RmlUi_Platform_SDL.h"
-#include "Rendering/GLProgram.hpp"
 #include "Rendering/Camera.hpp"
 #include "CameraController.hpp"
+#include "World/ChunkWorld.hpp"
+#include "Rendering/OpenGL/ChunkRenderer.hpp"
 
 int main()
 {
@@ -43,48 +44,21 @@ int main()
 
 	Rml::Debugger::Initialise(context);
 	Rml::Debugger::SetVisible(true);
-
-    const int VERTEX_COUNT = 6;
-    GLfloat vertices[] =
-    {
-        -0.5f, -0.5f, 0.0f,
-        -0.5f, 0.5f, 0.0f,
-         0.5f,  0.5f, 0.0f,
-
-         0.5f, 0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-        -0.5f, -0.5f, 0.0f,
-    };
-    GLuint VBO;
-    glGenBuffers(1, &VBO);
-
-    GLShaderProgram program;
-    if(!program.Load("assets/shaders/triangle.vs", "assets/shaders/triangle.fs"))
-    {
-        return -1;
-    }
-
-    GLuint VAO;
-    glGenVertexArrays(1, &VAO);
-
-    glBindVertexArray(VAO);
-    // 2. Копируем наш массив вершин в буфер для OpenGL
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); 
-    // 3. Устанавливаем указатели на вершинные атрибуты 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(0); 
-    //4. Отвязываем VAO
-    glBindVertexArray(0); 
-    ////////////////////////////////
+    
+    ChunkWorld world;
+    world.LoadChunk({0, 0});
+    world.LoadChunk({-1, -1});
+    
     Camera camera(window);
     camera.SetPosition(glm::vec3(1.0f, 0.0f, 11.0f));
     CameraController cameraController(&camera);
 
+    GL::ChunkRenderer renderer(&world, &camera);
+
     SDL_SetWindowRelativeMouseMode(window, true);
 
     glClearColor(0.0, 0.0, 1.0, 1.0);
-
+    
     bool running = true;
     bool sendEventsToUi = false;
 
@@ -108,16 +82,10 @@ int main()
             }
         }
 		context->Update();
-
         cameraController.Update(1.0f);
 
         glClear(GL_COLOR_BUFFER_BIT);
-        program.Use();
-        program.SetUniformMat4x4("projection_view", camera.CalcMatrix());
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT);
-        glBindVertexArray(0);
-
+        renderer.Render();
 		Backend::BeginFrame();
 		context->Render();
 		Backend::PresentFrame();

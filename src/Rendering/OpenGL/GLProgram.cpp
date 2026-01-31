@@ -20,7 +20,8 @@ GLchar* GLShaderProgram::LoadShader(const char* path)
 
 GLShaderProgram::~GLShaderProgram()
 {
-    glDeleteProgram(m_shaderProgram);
+    if(m_shaderProgram != -1)
+        glDeleteProgram(m_shaderProgram);
 }
 
 bool GLShaderProgram::Load(const char *vertexPath, const char *fragmentPath)
