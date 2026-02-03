@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../IChunkRenderer.hpp"
-#include "../../World/ChunkWorld.hpp"
+#include "Rendering/IChunkRenderer.hpp"
+#include "World/ChunkWorld.hpp"
 #include "GLProgram.hpp"
-#include "../../ThisProjectGL.hpp"
-#include "../Camera.hpp"
+#include "ThisProjectGL.hpp"
+#include "Rendering/Camera.hpp"
 #include <unordered_map>
 
 namespace GL
@@ -30,7 +30,8 @@ namespace GL
         std::unordered_map<ChunkXZ, ChunkMesh> m_meshes;
     public:
         ChunkRenderer(ChunkWorld* world, Camera* camera);
-        void Render();
+        ~ChunkRenderer();
+        void Render() override;
     private:
         std::vector<BlockVertex> CreateVertices(ChunkXZ chunkXZ, ChunkData& chunk);
         void UpdateChunkMesh(ChunkXZ chunkXZ, ChunkData& chunk);

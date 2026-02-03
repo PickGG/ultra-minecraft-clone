@@ -1,6 +1,7 @@
 #include "CameraController.hpp"
 
 #include <SDL3/SDL_keyboard.h>
+#include <cassert>
 #include <iostream>
 
 constexpr float DEFAULT_SPEED = 0.15;
@@ -8,6 +9,7 @@ constexpr float DEFAULT_SPEED = 0.15;
 CameraController::CameraController(Camera *camera)
     : m_camera(camera), m_speed(DEFAULT_SPEED)
 {
+    assert(m_camera != nullptr);
 }
 
 void CameraController::SetSpeed(float speed)

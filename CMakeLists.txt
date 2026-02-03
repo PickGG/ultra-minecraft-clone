@@ -8,16 +8,14 @@ find_package(SDL3_image CONFIG REQUIRED)
 find_package(glm REQUIRED)
 
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
-
 add_executable(game ${SRC_FILES})
-
+target_include_directories(game PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_custom_target(copy_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         ${CMAKE_BINARY_DIR}/assets
     COMMENT "Copying assets directory"
 )
-
 target_compile_features(game PRIVATE cxx_std_20)
 
 # TEMPORARY!!!!!

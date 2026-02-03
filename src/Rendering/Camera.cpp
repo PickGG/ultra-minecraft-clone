@@ -1,15 +1,16 @@
 #include "Camera.hpp"
 
 #include <SDL3/SDL_video.h>
-
 #include <glm/vec3.hpp> // glm::vec3
 #include <glm/mat4x4.hpp> // glm::mat4
 #include <glm/ext/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale
 #include <glm/ext/matrix_clip_space.hpp> // glm::perspective
+#include <cassert>
 
 Camera::Camera(SDL_Window *window)
     : m_window(window), m_yaw(-90.0), m_pitch(0.0)
 {
+    assert(window != nullptr);
     UpdateFrontVector();
 }
 

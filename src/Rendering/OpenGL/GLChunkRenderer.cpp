@@ -1,12 +1,19 @@
-#include "ChunkRenderer.hpp"
-#include "../../World/ChunkWorld.hpp"
+#include "GLChunkRenderer.hpp"
+#include <cassert>
 #include <iostream>
 
 using namespace GL;
 
-GL::ChunkRenderer::ChunkRenderer(ChunkWorld *world, Camera* camera) : m_world{world}, m_camera{camera}
+GL::ChunkRenderer::ChunkRenderer(ChunkWorld *world, Camera* camera)
+    : m_world{world}, m_camera{camera}
 {
+    assert(m_world != nullptr);
+    assert(m_camera != nullptr);
     m_shader.Load("assets/shaders/triangle.vs", "assets/shaders/triangle.fs"); // !!
+}
+
+GL::ChunkRenderer::~ChunkRenderer()
+{
 }
 
 void GL::ChunkRenderer::RenderChunk(ChunkXZ chunkXZ, ChunkData &chunkData)

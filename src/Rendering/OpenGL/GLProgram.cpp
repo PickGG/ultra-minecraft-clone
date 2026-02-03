@@ -3,6 +3,7 @@
 #include <SDL3/SDL_iostream.h>
 #include <SDL3/SDL_log.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <cassert>
 
 GLchar* GLShaderProgram::LoadShader(const char* path)
 {
@@ -20,13 +21,13 @@ GLchar* GLShaderProgram::LoadShader(const char* path)
 
 GLShaderProgram::~GLShaderProgram()
 {
-    if(m_shaderProgram != -1)
+    if(m_shaderProgram != 0)
         glDeleteProgram(m_shaderProgram);
 }
 
 bool GLShaderProgram::Load(const char *vertexPath, const char *fragmentPath)
 {
-    if(m_shaderProgram != -1)
+    if(m_shaderProgram != 0)
     {
         return true;
     }
@@ -94,7 +95,7 @@ bool GLShaderProgram::Load(const char *vertexPath, const char *fragmentPath)
         SDL_free(vertexShaderSource);
         SDL_free(fragmentShaderSource);
         glDeleteProgram(m_shaderProgram);
-        m_shaderProgram = -1;
+        m_shaderProgram = 0;
         return false;
     }
 
@@ -106,16 +107,18 @@ bool GLShaderProgram::Load(const char *vertexPath, const char *fragmentPath)
 
 void GLShaderProgram::Use()
 {
+    assert(m_shaderProgram != 0);
     glUseProgram(m_shaderProgram);
 }
 
 void GLShaderProgram::SetUniformMat4x4(const GLchar* name, glm::mat4x4 matrix)
 {
     GLint location = glGetUniformLocation(m_shaderProgram, name);
-    if(location == -1)
-    {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get a location of uniform '%s'", name);
-        return;
-    }
+    assert(location != -1 && location != GL_INVALID_VALUE && location != GL_INVALID_OPERATION);
+    // if(location == -1)
+    // {
+    //     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get a location of uniform '%s'", name);
+    //     return;
+    // }
     glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
 }
