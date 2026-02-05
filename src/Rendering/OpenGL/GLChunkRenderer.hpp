@@ -5,14 +5,16 @@
 #include "GLProgram.hpp"
 #include "ThisProjectGL.hpp"
 #include "Rendering/Camera.hpp"
+#include "GLTexture.hpp"
 #include <unordered_map>
+#include <memory>
 
 namespace GL
 {
     struct BlockVertex
     {
         GLfloat x, y, z;
-        // UVs
+        GLfloat u, v;
     };
 
     struct ChunkMesh
@@ -33,8 +35,8 @@ namespace GL
         ~ChunkRenderer();
         void Render() override;
     private:
-        std::vector<BlockVertex> CreateVertices(ChunkXZ chunkXZ, ChunkData& chunk);
-        void UpdateChunkMesh(ChunkXZ chunkXZ, ChunkData& chunk);
-        void RenderChunk(ChunkXZ chunkXZ, ChunkData& chunkData);
+        std::vector<BlockVertex> CreateVertices(ChunkXZ chunkXZ, const ChunkData& chunk);
+        void UpdateChunkMesh(ChunkXZ chunkXZ, const ChunkData& chunk);
+        std::unique_ptr<GL::Texture> m_testTexture;
     };
 }
