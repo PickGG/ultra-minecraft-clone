@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <glm/vec3.hpp>
+#include "Block.hpp"
 
 constexpr int CHUNK_WIDTH = 16;
 constexpr int CHUNK_DEPTH = 16;
@@ -29,7 +30,7 @@ namespace std
 
 struct ChunkData
 {
-    bool blocks[CHUNK_WIDTH][CHUNK_DEPTH][CHUNK_HEIGHT];
+    Block blocks[CHUNK_WIDTH][CHUNK_DEPTH][CHUNK_HEIGHT];
 };
 
 class ChunkWorld

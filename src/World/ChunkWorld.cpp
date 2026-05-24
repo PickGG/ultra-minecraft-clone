@@ -1,6 +1,6 @@
 #include "ChunkWorld.hpp"
 #include <cassert>
-#include <iostream>
+#include <cstdlib>
 
 ChunkWorld::ChunkWorld()
 {
@@ -17,10 +17,10 @@ void ChunkWorld::LoadChunk(ChunkXZ chunkXZ)
         {
             for(int x = 0; x < CHUNK_WIDTH; x++)
             {
-                chunkData.blocks[x][z][y] = false;
+                chunkData.blocks[x][z][y] = BLOCK_NONE;
 
-                if(y == 0)
-                    chunkData.blocks[x][z][y] = true;
+                if(std::rand() % 15 == 0)
+                    chunkData.blocks[x][z][y] = (Block)((BLOCK_NONE+1) + std::rand() % BLOCK_GRASS);
             }
         }
     }

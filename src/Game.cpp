@@ -10,6 +10,8 @@
 #include "CameraController.hpp"
 #include "World/ChunkWorld.hpp"
 #include "Rendering/OpenGL/GLChunkRenderer.hpp"
+#include "SpritePacker.hpp"
+#include "GameSpriteAtlas.hpp"
 
 std::unique_ptr<Game> Game::m_gameInstance = std::make_unique<Game>();
 
@@ -23,6 +25,10 @@ Game* Game::GetInstance()
 bool Game::Startup()
 {
     assert(!m_isStarted);
+
+    SDL_SetLogPriority(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_TRACE);
+
+    LoadContent();
 
     if(!Backend::Initialize("Ultra Minecraft clone", 800, 600, true))
     {
@@ -61,7 +67,7 @@ bool Game::Startup()
     m_chunkWorld = std::make_unique<ChunkWorld>();
     m_camera = std::make_unique<Camera>(window);
     m_cameraController = std::make_unique<CameraController>(m_camera.get());
-    m_chunkRenderer = std::make_unique<GL::ChunkRenderer>(m_chunkWorld.get(), m_camera.get());
+    m_chunkRenderer = std::make_unique<GL::ChunkRenderer>(m_chunkWorld.get(), m_camera.get(), m_gameSpriteAtlas.get());
     m_isRunning = true;
     m_isStarted = true;
 
@@ -120,10 +126,34 @@ void Game::Shutdown()
     m_chunkWorld.reset();
     m_cameraController.reset();
     m_camera.reset();
+    m_gameSpriteAtlas.reset();
+
 
     // Shutdown RmlUi.
     Rml::Shutdown();
 	Backend::Shutdown();
 
     m_isStarted = false;
+}
+
+GameSpriteAtlas &Game::GetGameAtlas() const
+{
+    return *m_gameSpriteAtlas;
+}
+
+void Game::LoadContent()
+{
+    m_gameSpriteAtlas = std::make_unique<GameSpriteAtlas>();
+    m_gameSpriteAtlas->RegisterBlockFaces(BLOCK_BEDROCK, BlockFaceTextures::WithSameFace("assets/block/bedrock.png"));
+    m_gameSpriteAtlas->RegisterBlockFaces(BLOCK_STONE, BlockFaceTextures::WithSameFace("assets/block/stone.png"));
+    m_gameSpriteAtlas->RegisterBlockFaces(BLOCK_COBBLESTONE, BlockFaceTextures::WithSameFace("assets/block/cobbled_stone_retro.png"));
+    m_gameSpriteAtlas->RegisterBlockFaces(BLOCK_DIRT, BlockFaceTextures::WithSameFace("assets/block/dirt.png"));
+    m_gameSpriteAtlas->RegisterBlockFaces(BLOCK_GRASS, BlockFaceTextures::WithSameSides(
+        "assets/block/grass_side.png",
+        "assets/block/grass_retro_top.png",
+        "assets/block/dirt.png"
+    ));
+    m_gameSpriteAtlas->RegisterBlockFaces(BLOCK_GLASS, BlockFaceTextures::WithSameFace("assets/block/glass.png"));
+    
+    m_gameSpriteAtlas->Pack();
 }

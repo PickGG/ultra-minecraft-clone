@@ -1,12 +1,11 @@
 #include "GLTexture.hpp"
-
+#include "Log.hpp"
 #include <SDL3/SDL_surface.h>
-#include <stdio.h>
 #include <cassert>
 
 GL::Texture::Texture(const SDL_Surface *surface)
 {
-    printf("Pixel format: %#x\n", surface->format);
+    //LOG_DEBUG("Pixel format: %#x\n", surface->format);
     assert(surface->format == SDL_PixelFormat::SDL_PIXELFORMAT_RGBA32);
 
     glGenTextures(1, &m_textureId);

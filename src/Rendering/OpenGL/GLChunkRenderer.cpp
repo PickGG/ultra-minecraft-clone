@@ -1,27 +1,17 @@
 #include "GLChunkRenderer.hpp"
 #include <cassert>
-#include <iostream>
 #include <SDL3/SDL_surface.h>
 #include <cstdlib>
 #include "Log.hpp"
+#include "GameSpriteAtlas.hpp"
 
-using namespace GL;
-
-GL::ChunkRenderer::ChunkRenderer(ChunkWorld *world, Camera* camera)
-    : m_world{world}, m_camera{camera}
+GL::ChunkRenderer::ChunkRenderer(ChunkWorld *world, Camera* camera, GameSpriteAtlas *gameAtlas)
+    : m_world{world}, m_camera{camera}, m_gameAtlas{gameAtlas}
 {
     assert(m_world != nullptr);
     assert(m_camera != nullptr);
+    assert(m_gameAtlas != nullptr);
     m_shader.Load("assets/shaders/chunk_mesh.vert.glsl", "assets/shaders/chunk_mesh.frag.glsl"); // !!
-
-    SDL_Surface* surface = SDL_LoadPNG("assets/block/dirt.png");
-    if(!surface)
-    {
-        LOG_CRIT("Failed to load image");
-        exit(1);
-    }
-    SDL_FlipSurface(surface, SDL_FLIP_VERTICAL);
-    m_testTexture = std::make_unique<GL::Texture>(surface);
 }
 
 GL::ChunkRenderer::~ChunkRenderer()
@@ -50,13 +40,13 @@ void GL::ChunkRenderer::Render()
         m_shader.Use();
         m_shader.SetUniformMat4x4("projection_view", m_camera->CalcMatrix());
         glBindVertexArray(mesh.VAO);
-        m_testTexture->Bind();
+        m_gameAtlas->GetTexture()->Bind();
         glDrawArrays(GL_TRIANGLES, 0, mesh.vertexCount);
         glBindVertexArray(0);
     }
 }
 
-std::vector<BlockVertex> GL::ChunkRenderer::CreateVertices(ChunkXZ chunkXZ, const ChunkData &chunk)
+std::vector<GL::ChunkRenderer::BlockVertex> GL::ChunkRenderer::CreateVertices(ChunkXZ chunkXZ, const ChunkData &chunk)
 {
     std::vector<BlockVertex> vertices;
     
@@ -66,64 +56,72 @@ std::vector<BlockVertex> GL::ChunkRenderer::CreateVertices(ChunkXZ chunkXZ, cons
         {
             for(int x = 0; x < CHUNK_WIDTH; x++)
             {
-                if(chunk.blocks[x][z][y] == false)
+                Block blockId = chunk.blocks[x][z][y];
+                if(blockId == BLOCK_NONE)
                     continue;
                 
                 glm::vec3 block = ChunkWorld::CalcXYZofBlockInChunk(chunkXZ, x, y, z);
+                const BlockUVMapping& mapping = m_gameAtlas->GetBlockUVMapping(blockId);
 
                 // FRONT
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, 0.0f, 1.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, 1.0f, 1.0f});
+                UVRect UVs = mapping.front;
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, UVs.left,  UVs.top});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, UVs.right, UVs.top});
 
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, 1.0f, 1.0f});
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, 1.0f, 0.0f});
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, UVs.right, UVs.top});
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, UVs.right, UVs.bottom});
 
                 // BACK
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, 0.0f, 1.0f});
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, 1.0f, 1.0f});
+                UVs = mapping.back;
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, UVs.left,  UVs.top});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, UVs.right, UVs.top});
 
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, 1.0f, 1.0f});
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, 1.0f, 0.0f});
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, UVs.right, UVs.top});
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, UVs.right, UVs.bottom});
 
                 // LEFT
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, 0.0f, 1.0f});
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, 1.0f, 1.0f});
+                UVs = mapping.left;
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, UVs.left,  UVs.top});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, UVs.right, UVs.top});
 
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, 1.0f, 1.0f});
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, 1.0f, 0.0f});
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, UVs.right, UVs.top});
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, UVs.right, UVs.bottom});
 
                 // RIGHT
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, 0.0f, 1.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, 1.0f, 1.0f});
+                UVs = mapping.right;
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, UVs.left,  UVs.top});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, UVs.right, UVs.top});
 
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, 1.0f, 1.0f});
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, 1.0f, 0.0f});
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, UVs.right, UVs.top});
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, UVs.right, UVs.bottom});
 
                 // TOP
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, 0.0f, 1.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, 1.0f, 1.0f});
+                UVs = mapping.top;
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z-0.5f, UVs.left,  UVs.top});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, UVs.right, UVs.top});
 
-                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, 1.0f, 1.0f});
-                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, 1.0f, 0.0f});
+                vertices.push_back({block.x-0.5f, block.y+0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z-0.5f, UVs.right, UVs.top});
+                vertices.push_back({block.x+0.5f, block.y+0.5f, block.z+0.5f, UVs.right, UVs.bottom});
 
                 // BOTTOM
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, 0.0f, 1.0f});
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, 1.0f, 1.0f});
+                UVs = mapping.bottom;
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z-0.5f, UVs.left,  UVs.top});
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, UVs.right, UVs.top});
 
-                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, 0.0f, 0.0f});
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, 1.0f, 1.0f});
-                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, 1.0f, 0.0f});
+                vertices.push_back({block.x+0.5f, block.y-0.5f, block.z+0.5f, UVs.left,  UVs.bottom});
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z-0.5f, UVs.right, UVs.top});
+                vertices.push_back({block.x-0.5f, block.y-0.5f, block.z+0.5f, UVs.right, UVs.bottom});
             }
         }
     }
@@ -133,7 +131,7 @@ std::vector<BlockVertex> GL::ChunkRenderer::CreateVertices(ChunkXZ chunkXZ, cons
 
 void GL::ChunkRenderer::UpdateChunkMesh(ChunkXZ chunkXZ, const ChunkData& chunk)
 {
-    std::cout << "Creating mesh: " << chunkXZ.X << " " << chunkXZ.Z << std::endl;
+    LOG_DEBUG("Creating chunk mesh: (%d, %d)", chunkXZ.X, chunkXZ.Z);
 
     std::vector<BlockVertex> vertices = CreateVertices(chunkXZ, chunk);
     ChunkMesh mesh;
